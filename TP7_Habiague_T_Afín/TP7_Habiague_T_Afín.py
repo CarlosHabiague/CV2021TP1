@@ -1,10 +1,9 @@
 ###       TP7_Transformación Afín con Eventos del mouse       ###
 ###                                                           ###
-### NOTA: Se carga una imágen, se selecciona el recorte       ###
-###       y con la entrada por teclado se opta por:           ###
-###       (e o E) Aplica transformación, guarda y sale.       ###
-###       (r o R) Vuelve a seleccionar el recote,             ###
-###       (q o Q o ESCAPE) salir                              ###
+### NOTA: Se cargan 2 imagenes:                               ###
+###   (a o A) Habilita la selección de 3 puntos con el mouse, ###
+###   (g o G) Guarda la imagen nueva con el incruste,         ###
+###   (q o Q o ESCAPE) salir                                  ###
 ###                                                           ###
 ### Alumno: HABIAGUE, Carlos.                                 ###
 ###                                                           ###
@@ -16,107 +15,75 @@
 # -*- coding: utf-8 -*-
 import cv2
 import numpy as np
-import math
 
-blue = (255, 0, 0 ); green = (0, 255, 0); red = (0, 0, 255)
-capturing = False
-# true si el botón está presionado
-mode = False
-k = 0
-xybutton_down = -1, -1
-tx = 0 
-ty = 0
-center = None
-scale = 0
-angle = 0
-count = 1
+blue = (255, 0, 0); green = (0, 255, 0); red = (0, 0, 255);     #Define colores
 
-img = cv2.imread('hoja.png')
+count = 1                                              
+
 print('---------- TRANSFORMACIONES DE IMÁGENES CON OPEN CV ---------- \n\n')
-print('Seleccione 3 puntos sobre la imágen:')
+print('--- Presione A, seleccione 3 puntos y luego presione G para guardar.\n --- Si desea, presione Q para salir.')
 
-def dibuja (event, x, y, flags, param): # param=grosor (si es -1, es relleno)
-    global xybutton_down, capturing, mode, imag, x_1, x_2, y_1, y_2, x_3, y_3, imagen, count
+def trans_afin(image, origen, destino):                     #Recibe los 3 puntos para la transformación
+    (al, an) = image.shape[:2]
 
-    if event == cv2.EVENT_LBUTTONDOWN:
-        capturing = True
-        xybutton_down = x, y
+    M = cv2.getAffineTransform(origen, destino)         #Matriz transf afin
+
+    img_out = cv2.warpAffine(image, M, (al,an))         #Transformacion afin
+                                                        
+    return img_out
+
+def dibuja (event, x, y, flags, param):           #Función que grafica el rectángulo
+    global x1, y1, x2, y2, x3, y3, count               
+    if event == cv2.EVENT_LBUTTONDOWN:                  
         if count == 1:
-            x_1= x
-            y_1= y
+            x1, y1 = x, y                               #Guardo el punto 1
+            cv2.circle(image, (x,y),2,green,-1)           
             count = 2
         elif count == 2:
-            x_2= x
-            y_2= y
+            x2, y2 = x, y                               #Guardo el punto 2
+            cv2.circle(image, (x,y),2,green,-1)          
             count = 3
         elif count == 3:
-            x_3= x
-            y_3= y
-            count = 4
-        elif count == 4:
-
-        
+            x3, y3 = x, y                               #Guardo el punto 3
+            cv2.circle(image, (x,y),2,green,-1)         
+            count = 0
 
 
+image = cv2.imread('escenario.jpg')                         #Imagen de fondo
+(h, w) = image.shape[:2]                                
+
+img_incr = cv2.imread('perrito.jpg')                         #Imagen de incruste
+(H, W) = img_incr.shape[:2]
 
 
+img_out = np.zeros((h,w), np.uint8)                         #Imagen de salida
 
-
-    #elif event == cv2.EVENT_MOUSEMOVE:
-        #if capturing is True:
-            #x_2= x
-            #y_2= y
-            #img [ : ] = cv2.imread('hoja.png')
-            #cv2.rectangle(img, xybutton_down, (x, y), blue, 1)
-              
-    elif event == cv2.EVENT_LBUTTONUP: # cuando se suelta el clik...
-        print('Recorte capturado, presione (e) si desea transformar, guardar y salir, (r) si desea volver a elegir recorte o (q) para salir: ')
-        crop_img = img[y_1:y_2, x_1:x_2] #dimensiono mi recorte dentro de la imagen original
-        cv2.imshow("cropped", crop_img)
-        imagen = crop_img    
-        capturing = False
-        
-cv2.namedWindow('image')
-cv2.setMouseCallback ('image', dibuja)
-    
-
-def simil (imagen, angle, tx, ty):
-    global imagen_2, shifted, center, scale
-    (h, w) = (imagen.shape[0], imagen.shape[1])
-
-    #hipotenusa = math.sqrt((h**2)+(w**2))
-    #coseno = math.cos(math.radians(angle))
-    #mseno = math.sin(math.radians(angle)) * (-1)
-    #seno = math.sin(math.radians(angle))
-
-    N = cv2.getRotationMatrix2D(center, angle, scale)
-    M = np.float32([[N[0,0],N[0,1],tx],[N[1,0],N[1,1],ty]])
-   
-    if center is None :
-        center = (w/2, h/2)
-
-    shifted =cv2.warpAffine(imagen, M,(int(scale*2*w),int(scale*2*h)))
-    return shifted
-    
-while (1):
-    cv2.imshow('image', img)
+while True: 
+    cv2.imshow('Imagen de fondo', image) #Muestro imagen de fondo
     k = cv2.waitKey(1) & 0xFF
-   
-    if k == (ord('e') or ord('E')): # Transforma y guarda la imágen nueva.
-        
-        imagen_2 = simil (imagen, angle, tx, ty)
-        cv2.imwrite ('trans_simi.png', imagen_2)
 
-        print('Seleccion guardada exitosamente con el nombre: trans_simil.png \n')
-        cv2.waitKey(1)
+    if k == (ord ('q') or ord('Q') or 27):                                   #Sale al presionar 'q'
         break
 
-    elif k == (ord('r') or ord('R')): # vuelve a elegir el rectángulo de recorte
-        img [:] = cv2.imread('hoja.png')
-        mode == 'r'
-        print('Seleccione nuevamente la sección que desea:  \n')
+    if k == (ord('a') or ord('A')):                                   #Selecciona tres puntos con 'a'
 
-    elif k ==  (ord ('q') or ord('Q') or 27): # con q, Q o tecla "escape" sale del programa.
-        break
-cv2.destroyAllWindows()
+        cv2.namedWindow('Imagen de fondo')
+        cv2.setMouseCallback('Imagen de fondo', dibuja)     #Cuando hay un evento del mouse se llama a f
+    
+    if k == (ord('g') or ord('G')):                                   #Guardo al presionar 'g'
+        origen = np.float32([[0,0],[W-1,0],[0,H-1]])    #3 vertices de la imagen a incrustar
+        destino = np.float32([[x1,y1],[x2,y2],[x3,y3]]) #Puntos seleccionados en el fondo
+        img_incr = trans_afin(img_incr,origen,destino)          #Transformación afin del incruste
 
+        mascara = np.array([[x1,y1],[x3,y3],[x3+x2-x1,y3+y2-y1],[x2,y2]],np.int32)  #Mascara para sumar imagenes
+        cv2.fillPoly(image, [mascara], (0,0,0), cv2.LINE_AA)                        #Aplico máscara al fondo
+
+        img_incr = img_incr[0:h, 0:w]                   #(Si img_incr es mas chica, tira error... )
+        img_out = cv2.add(image,img_incr)                 #Sumo imágen del fondo con la incrustada.
+        cv2.imwrite('output.jpg',img_out)               #Guardo la imagen de salida
+        break 
+
+cv2.imshow('Imagen de salida', img_out) 
+cv2.waitKey(0)
+
+cv2.destroyAllWindows()                                 
